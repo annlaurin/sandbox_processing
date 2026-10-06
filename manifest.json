@@ -1,0 +1,9 @@
+{
+  "name": "Sandbox Processing",
+  "short_name": "Sandbox",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f0e8",
+  "theme_color": "#f4f0e8",
+  "description": "Fast intake form for sandbox garments."
+}
