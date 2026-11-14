@@ -190,6 +190,28 @@
       margin-bottom:10px;
     }
     .recent-head h2{font-size:20px;margin:0}
+    .recent-tools{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .recent-tools input{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:11px 12px;
+      font:inherit;
+      background:#fff;
+      color:var(--ink);
+      box-sizing:border-box;
+    }
+    .recent-count{
+      font-size:12px;
+      color:var(--muted);
+      margin:-2px 0 6px;
+    }
     .item{
       display:grid;
       grid-template-columns:58px 1fr auto;
@@ -220,6 +242,8 @@
       .grid{grid-template-columns:1fr}
       h1{font-size:27px}
       .wrap{padding-left:14px;padding-right:14px}
+      .recent-tools{grid-template-columns:1fr}
+      .recent-tools button{width:100%}
     }
   </style>
 </head>
@@ -331,6 +355,11 @@
       <h2>Recent items</h2>
       <button id="exportBtn" type="button" class="secondary">Export CSV</button>
     </div>
+    <div class="recent-tools">
+      <input id="itemSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search Item ID" aria-label="Search Item ID" />
+      <button id="showAllBtn" type="button" class="secondary">Show all</button>
+    </div>
+    <div id="recentCount" class="recent-count"></div>
     <div id="recent"></div>
     <div class="footer-note">
       Records and compressed quick photos are stored on this device in the browser.
@@ -345,6 +374,8 @@ const DB_VERSION = 1;
 const STORE = "items";
 let db;
 let currentPhoto = null;
+let showAllItems = false;
+let itemSearchQuery = "";
 
 function openDB(){
   return new Promise((resolve,reject)=>{
@@ -526,23 +557,49 @@ function measurementSummary(x){
 async function renderRecent(){
   const list=await allItems();
   const box=document.getElementById("recent");
+  const count=document.getElementById("recentCount");
+  const showAllBtn=document.getElementById("showAllBtn");
   box.innerHTML="";
-  if(!list.length){
-    box.innerHTML='<div class="empty">No processed items yet.</div>';
-    return;
+
+  const q=itemSearchQuery.trim().toUpperCase();
+  const filtered=q ? list.filter(x=>String(x.id||"").toUpperCase().includes(q)) : list;
+  const visible=q ? filtered : (showAllItems ? filtered : filtered.slice(0,20));
+
+  if(!filtered.length){
+    box.innerHTML=`<div class="empty">${q ? "No matching items." : "No processed items yet."}</div>`;
+    count.textContent=q ? `0 matches · ${list.length} total items` : "";
+  }else{
+    count.textContent=q
+      ? `${filtered.length} match${filtered.length===1?"":"es"} · ${list.length} total items`
+      : `${visible.length} of ${list.length} items shown`;
+
+    visible.forEach(x=>{
+      const row=document.createElement("div");row.className="item";
+      const img=document.createElement("img");img.className="thumb";
+      if(x.photo) img.src=x.photo;
+      const middle=document.createElement("div");
+      middle.innerHTML=`<div class="item-id">${escapeHtml(x.id)} · ${escapeHtml(x.type)}</div>
+        <div class="meta">${escapeHtml(measurementSummary(x) || "No measurements")}</div>`;
+      const btn=document.createElement("button");btn.className="mini";btn.type="button";btn.textContent="Open";
+      btn.addEventListener("click",()=>loadForEdit(x.id));
+      row.append(img,middle,btn);box.append(row);
+    });
   }
-  list.slice(0,20).forEach(x=>{
-    const row=document.createElement("div");row.className="item";
-    const img=document.createElement("img");img.className="thumb";
-    if(x.photo) img.src=x.photo;
-    const middle=document.createElement("div");
-    middle.innerHTML=`<div class="item-id">${escapeHtml(x.id)} · ${escapeHtml(x.type)}</div>
-      <div class="meta">${escapeHtml(measurementSummary(x) || "No measurements")}</div>`;
-    const btn=document.createElement("button");btn.className="mini";btn.type="button";btn.textContent="Open";
-    btn.addEventListener("click",()=>loadForEdit(x.id));
-    row.append(img,middle,btn);box.append(row);
-  });
+
+  showAllBtn.style.display = list.length > 20 && !q ? "inline-block" : "none";
+  showAllBtn.textContent = showAllItems ? "Show recent" : `Show all (${list.length})`;
 }
+
+document.getElementById("itemSearch").addEventListener("input", e=>{
+  itemSearchQuery=e.target.value;
+  renderRecent();
+});
+
+document.getElementById("showAllBtn").addEventListener("click", ()=>{
+  showAllItems=!showAllItems;
+  renderRecent();
+});
+
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 }
