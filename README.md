@@ -30,3 +30,9 @@ For the camera button and “Add to Home Screen” experience, serve these files
 Share → Add to Home Screen.
 
 The form itself is fully client-side; no server receives your garment data.
+
+v1.3
+- Recent items still shows the newest 20 by default.
+- Added Item ID search across all stored records.
+- Added Show all / Show recent toggle.
+- CSV export and IndexedDB data are unchanged.
